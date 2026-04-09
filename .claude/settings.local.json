@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --turbopack)"
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --turbopack)",
+      "Bash(curl -L -o \"E:/Upwork/turf-cricket/public/hero-bg.jpg\" \"https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=1920&q=80\")",
+      "Bash(npx next:*)",
+      "Bash(npx tailwindcss:*)",
+      "Bash(npm ls:*)",
+      "Bash(npx shadcn@latest add https://21st.dev/r/meschacirung/features-4 --yes)",
+      "Bash(npx shadcn@latest add https://21st.dev/r/shadcnblockscom/footer-7 --yes)",
+      "Bash(npx shadcn@latest init --yes)",
+      "Bash(npx shadcn@latest init --defaults)"
     ]
   }
 }
