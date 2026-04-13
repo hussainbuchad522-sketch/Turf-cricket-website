@@ -1,0 +1,16 @@
+[
+  {
+    "name": "aman",
+    "phone": "1234567890",
+    "date": "2026-04-11",
+    "slots": [
+      1,
+      2,
+      3
+    ],
+    "totalPrice": 2100,
+    "type": "offline",
+    "id": "mnu8zlf88pf1",
+    "createdAt": "2026-04-11T11:24:46.772Z"
+  }
+]

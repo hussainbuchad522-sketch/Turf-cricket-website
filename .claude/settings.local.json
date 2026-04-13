@@ -9,7 +9,30 @@
       "Bash(npx shadcn@latest add https://21st.dev/r/meschacirung/features-4 --yes)",
       "Bash(npx shadcn@latest add https://21st.dev/r/shadcnblockscom/footer-7 --yes)",
       "Bash(npx shadcn@latest init --yes)",
-      "Bash(npx shadcn@latest init --defaults)"
+      "Bash(npx shadcn@latest init --defaults)",
+      "Bash(timeout 10 bash:*)",
+      "Bash(npx shadcn@latest add https://21st.dev/r/meschacirung/features-4 --yes --overwrite)",
+      "Bash(npx shadcn@latest add https://21st.dev/r/shadcnblockscom/footer-7 --yes --overwrite)",
+      "Bash(npx shadcn@latest add https://21st.dev/r/abdulali254/nav-header --yes --overwrite)",
+      "Bash(curl -s http://localhost:3099)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(curl -s http://localhost:3000/_next/static/chunks/%5Broot-of-the-server%5D__00v2gu.._.css)",
+      "Bash(node -e \"try { console.log\\(require.resolve\\('shadcn/tailwind.css'\\)\\); } catch\\(e\\) { console.log\\('NOT FOUND:', e.message\\); }\")",
+      "Bash(node -e \"const pkg = require\\('./node_modules/shadcn/package.json'\\); console.log\\(JSON.stringify\\(pkg.exports, null, 2\\)\\)\")",
+      "Bash(taskkill:*)",
+      "Bash(node -e \"try { console.log\\(require.resolve\\('tw-animate-css'\\)\\); } catch\\(e\\) { console.log\\('NOT FOUND:', e.message\\); }\")",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const p=JSON.parse\\(d\\); console.log\\('exports:', JSON.stringify\\(p.exports,null,2\\)\\); console.log\\('main:', p.main\\); console.log\\('style:', p.style\\);\")",
+      "Bash(node:*)",
+      "Bash(npx mvpblocks:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:mvpblocks.com)",
+      "WebFetch(domain:api.mvpblocks.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(npx shadcn@latest add button input label popover calendar --yes --overwrite)",
+      "WebFetch(domain:maps.app.goo.gl)",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest add sidebar --yes --overwrite)",
+      "Bash(git add:*)"
     ]
   }
 }
