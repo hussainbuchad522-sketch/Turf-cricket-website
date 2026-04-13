@@ -14,10 +14,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { timeSlots } from "@/lib/timeSlots";
+import { timeSlots, calcTotal } from "@/lib/timeSlots";
 
 export default function BookingSection() {
   const [date, setDate] = useState<Date>();
+  const [turf, setTurf] = useState<1 | 2>(1);
   const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
   const [bookedSlots, setBookedSlots] = useState<number[]>([]);
   const [unavailableSlots, setUnavailableSlots] = useState<number[]>([]);
@@ -27,12 +28,12 @@ export default function BookingSection() {
   const fetchSlotStatus = useCallback(async () => {
     if (!date) return;
     const dateStr = format(date, "yyyy-MM-dd");
-    const res = await fetch(`/api/slots?date=${dateStr}`);
+    const res = await fetch(`/api/slots?date=${dateStr}&turf=${turf}`);
     const data = await res.json();
     setBookedSlots(data.bookedSlots || []);
     setUnavailableSlots(data.unavailableSlots || []);
     setSelectedSlots([]);
-  }, [date]);
+  }, [date, turf]);
 
   useEffect(() => {
     fetchSlotStatus();
@@ -64,10 +65,7 @@ export default function BookingSection() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const totalPrice = selectedSlots.reduce(
-    (sum, index) => sum + timeSlots[index].price,
-    0
-  );
+  const { subtotal, gst, total } = calcTotal(selectedSlots);
 
   const handleBooking = async () => {
     if (!name || phone.length !== 10 || !date || selectedSlots.length === 0) return;
@@ -82,6 +80,7 @@ export default function BookingSection() {
         name,
         phone,
         date: dateStr,
+        turf,
         slots: selectedSlots,
         type: "online",
       }),
@@ -189,6 +188,31 @@ export default function BookingSection() {
               </div>
             </div>
 
+            {/* Turf Selection */}
+            <div className="space-y-2">
+              <Label>Select Turf</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {[1, 2].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTurf(t as 1 | 2)}
+                    className={cn(
+                      "rounded-lg border px-4 py-2.5 text-sm font-medium transition-all",
+                      turf === t
+                        ? "border-black bg-black text-white"
+                        : "border-input hover:border-black/40"
+                    )}
+                  >
+                    Turf {t}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Each turf is booked independently.
+              </p>
+            </div>
+
             {/* Date Picker */}
             <div className="space-y-2">
               <Label>Select Date</Label>
@@ -282,10 +306,19 @@ export default function BookingSection() {
             <div className="flex items-center justify-between rounded-lg border border-input p-4">
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Total ({selectedSlots.length} slot
-                  {selectedSlots.length !== 1 ? "s" : ""})
+                  Turf {turf} · {selectedSlots.length} slot
+                  {selectedSlots.length !== 1 ? "s" : ""}
                 </p>
-                <p className="text-2xl font-semibold">₹{totalPrice}</p>
+                {selectedSlots.length > 0 ? (
+                  <>
+                    <p className="text-2xl font-semibold">₹{total}</p>
+                    <p className="text-xs text-muted-foreground">
+                      ₹{subtotal} + ₹{gst} GST included
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-2xl font-semibold">₹0</p>
+                )}
               </div>
               <Button
                 className="rounded-full bg-black px-8 py-5 text-white hover:bg-black/90"

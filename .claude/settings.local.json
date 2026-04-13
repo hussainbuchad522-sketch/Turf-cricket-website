@@ -32,7 +32,8 @@
       "WebFetch(domain:maps.app.goo.gl)",
       "Bash(npm install:*)",
       "Bash(npx shadcn@latest add sidebar --yes --overwrite)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

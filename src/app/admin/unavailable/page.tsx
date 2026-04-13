@@ -18,6 +18,7 @@ import { timeSlots } from "@/lib/timeSlots";
 interface UnavailableEntry {
   _id: string;
   date: string;
+  turf: 1 | 2;
   slots: number[];
   reason: string;
   createdAt: string;
@@ -25,6 +26,7 @@ interface UnavailableEntry {
 
 export default function MarkUnavailablePage() {
   const [date, setDate] = useState<Date>(new Date());
+  const [turf, setTurf] = useState<1 | 2>(1);
   const [entries, setEntries] = useState<UnavailableEntry[]>([]);
   const [bookedSlots, setBookedSlots] = useState<number[]>([]);
   const [unavailableSlots, setUnavailableSlots] = useState<number[]>([]);
@@ -39,8 +41,8 @@ export default function MarkUnavailablePage() {
     setLoading(true);
 
     const [slotsRes, unavailRes] = await Promise.all([
-      fetch(`/api/slots?date=${dateStr}`),
-      fetch(`/api/unavailable?date=${dateStr}`),
+      fetch(`/api/slots?date=${dateStr}&turf=${turf}`),
+      fetch(`/api/unavailable?date=${dateStr}&turf=${turf}`),
     ]);
 
     const slotsData = await slotsRes.json();
@@ -51,7 +53,7 @@ export default function MarkUnavailablePage() {
     setEntries(unavailData.entries || []);
     setSelectedSlots([]);
     setLoading(false);
-  }, [dateStr]);
+  }, [dateStr, turf]);
 
   useEffect(() => {
     fetchData();
@@ -71,7 +73,7 @@ export default function MarkUnavailablePage() {
     const res = await fetch("/api/unavailable", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date: dateStr, slots: selectedSlots, reason }),
+      body: JSON.stringify({ date: dateStr, turf, slots: selectedSlots, reason }),
     });
 
     if (res.ok) {
@@ -102,8 +104,28 @@ export default function MarkUnavailablePage() {
         </div>
       )}
 
-      {/* Date + Reason */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      {/* Turf + Date + Reason */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="space-y-2">
+          <Label>Turf</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {[1, 2].map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTurf(t as 1 | 2)}
+                className={cn(
+                  "h-9 rounded-lg border text-sm font-medium transition-all",
+                  turf === t
+                    ? "border-black bg-black text-white"
+                    : "border-input hover:border-black/40"
+                )}
+              >
+                Turf {t}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="space-y-2">
           <Label>Date</Label>
           <Popover>
@@ -134,7 +156,7 @@ export default function MarkUnavailablePage() {
       {/* Slot Grid */}
       <div className="rounded-xl border bg-white p-5">
         <h2 className="mb-4 font-semibold">
-          Select slots to block — {format(date, "dd MMM yyyy")}
+          Turf {turf} · Block slots — {format(date, "dd MMM yyyy")}
         </h2>
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
@@ -196,7 +218,9 @@ export default function MarkUnavailablePage() {
       {/* Existing Blocked Entries */}
       {entries.length > 0 && (
         <div className="rounded-xl border bg-white p-5 space-y-4">
-          <h2 className="font-semibold">Blocked Slots for {format(date, "dd MMM yyyy")}</h2>
+          <h2 className="font-semibold">
+            Blocked Slots — Turf {turf} · {format(date, "dd MMM yyyy")}
+          </h2>
           <div className="space-y-3">
             {entries.map((entry) => (
               <div

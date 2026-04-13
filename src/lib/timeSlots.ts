@@ -24,3 +24,15 @@ export const timeSlots = [
   { time: "4:00 AM - 5:00 AM", price: 1200, light: true },
   { time: "5:00 AM - 6:00 AM", price: 1200, light: true },
 ];
+
+export const GST_AMOUNT = 50;
+
+export function calcTotal(slotIndexes: number[]): {
+  subtotal: number;
+  gst: number;
+  total: number;
+} {
+  if (!slotIndexes.length) return { subtotal: 0, gst: 0, total: 0 };
+  const subtotal = slotIndexes.reduce((s, i) => s + timeSlots[i].price, 0);
+  return { subtotal, gst: GST_AMOUNT, total: subtotal + GST_AMOUNT };
+}

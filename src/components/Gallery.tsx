@@ -1,7 +1,29 @@
 import Image from "next/image";
 import RevealOnScroll from "@/components/RevealOnScroll";
 
+const galleryImages = [
+  "/image/img-1.jpg",
+  "/image/img-2.jpg",
+  "/image/img-3.jpg",
+  "/image/img-4.jpg",
+  "/image/img-5.jpg",
+  "/image/img-6.jpg",
+  "/image/img-7.jpg",
+  "/image/img-8.jpg",
+  "/image/img-9.jpg",
+  "/image/img.jpg",
+  "/image/img-1.jpg",
+  "/image/img-2.jpg",
+];
+
 export default function Gallery() {
+  const columns = [
+    galleryImages.slice(0, 3),
+    galleryImages.slice(3, 6),
+    galleryImages.slice(6, 9),
+    galleryImages.slice(9, 12),
+  ];
+
   return (
     <section id="gallery" className="py-12 md:py-20">
       <div className="mx-auto max-w-7xl space-y-6 px-5 md:space-y-12">
@@ -17,122 +39,24 @@ export default function Gallery() {
         </RevealOnScroll>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="grid gap-4">
-            <div className="overflow-hidden rounded-lg h-36 sm:h-48 md:h-56">
-              <Image
-                className="h-full w-full object-cover"
-                src="/image/hero-1.jpg"
-                alt="Turf gallery 1"
-                width={600}
-                height={400}
-              />
+          {columns.map((col, ci) => (
+            <div key={ci} className="grid gap-4">
+              {col.map((src, ri) => (
+                <div
+                  key={`${ci}-${ri}`}
+                  className="overflow-hidden rounded-lg h-36 sm:h-48 md:h-56"
+                >
+                  <Image
+                    className="h-full w-full object-cover"
+                    src={src}
+                    alt={`Turf gallery ${ci * 3 + ri + 1}`}
+                    width={600}
+                    height={400}
+                  />
+                </div>
+              ))}
             </div>
-            <div className="overflow-hidden rounded-lg h-36 sm:h-48 md:h-56">
-              <Image
-                className="h-full w-full object-cover"
-                src="/image/hero-2.jpg"
-                alt="Turf gallery 2"
-                width={600}
-                height={400}
-              />
-            </div>
-            <div className="overflow-hidden rounded-lg h-36 sm:h-48 md:h-56">
-              <Image
-                className="h-full w-full object-cover"
-                src="/image/hero-3.jpeg"
-                alt="Turf gallery 3"
-                width={600}
-                height={400}
-              />
-            </div>
-          </div>
-          <div className="grid gap-4">
-            <div className="overflow-hidden rounded-lg h-36 sm:h-48 md:h-56">
-              <Image
-                className="h-full w-full object-cover"
-                src="/image/hero-main.jpg"
-                alt="Turf gallery 4"
-                width={600}
-                height={400}
-              />
-            </div>
-            <div className="overflow-hidden rounded-lg h-36 sm:h-48 md:h-56">
-              <Image
-                className="h-full w-full object-cover"
-                src="/image/hero-bg.jpg"
-                alt="Turf gallery 5"
-                width={600}
-                height={400}
-              />
-            </div>
-            <div className="overflow-hidden rounded-lg h-36 sm:h-48 md:h-56">
-              <Image
-                className="h-full w-full object-cover"
-                src="/image/hero-1.jpg"
-                alt="Turf gallery 6"
-                width={600}
-                height={400}
-              />
-            </div>
-          </div>
-          <div className="grid gap-4">
-            <div className="overflow-hidden rounded-lg h-36 sm:h-48 md:h-56">
-              <Image
-                className="h-full w-full object-cover"
-                src="/image/hero-2.jpg"
-                alt="Turf gallery 7"
-                width={600}
-                height={400}
-              />
-            </div>
-            <div className="overflow-hidden rounded-lg h-36 sm:h-48 md:h-56">
-              <Image
-                className="h-full w-full object-cover"
-                src="/image/hero-3.jpeg"
-                alt="Turf gallery 8"
-                width={600}
-                height={400}
-              />
-            </div>
-            <div className="overflow-hidden rounded-lg h-36 sm:h-48 md:h-56">
-              <Image
-                className="h-full w-full object-cover"
-                src="/image/hero-main.jpg"
-                alt="Turf gallery 9"
-                width={600}
-                height={400}
-              />
-            </div>
-          </div>
-          <div className="grid gap-4">
-            <div className="overflow-hidden rounded-lg h-36 sm:h-48 md:h-56">
-              <Image
-                className="h-full w-full object-cover"
-                src="/image/hero-bg.jpg"
-                alt="Turf gallery 10"
-                width={600}
-                height={400}
-              />
-            </div>
-            <div className="overflow-hidden rounded-lg h-36 sm:h-48 md:h-56">
-              <Image
-                className="h-full w-full object-cover"
-                src="/image/hero-1.jpg"
-                alt="Turf gallery 11"
-                width={600}
-                height={400}
-              />
-            </div>
-            <div className="overflow-hidden rounded-lg h-36 sm:h-48 md:h-56">
-              <Image
-                className="h-full w-full object-cover"
-                src="/image/hero-2.jpg"
-                alt="Turf gallery 12"
-                width={600}
-                height={400}
-              />
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </section>

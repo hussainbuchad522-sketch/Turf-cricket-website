@@ -18,6 +18,7 @@ interface Booking {
   name: string;
   phone: string;
   date: string;
+  turf: 1 | 2;
   slots: number[];
   totalPrice: number;
   type: "online" | "offline";
@@ -119,16 +120,21 @@ export default function AllBookingsPage() {
                     </div>
                   </div>
                 </div>
-                <span
-                  className={cn(
-                    "rounded-full px-2.5 py-0.5 text-xs font-medium",
-                    booking.type === "online"
-                      ? "bg-blue-50 text-blue-600"
-                      : "bg-orange-50 text-orange-600"
-                  )}
-                >
-                  {booking.type}
-                </span>
+                <div className="flex flex-col items-end gap-1">
+                  <span
+                    className={cn(
+                      "rounded-full px-2.5 py-0.5 text-xs font-medium",
+                      booking.type === "online"
+                        ? "bg-blue-50 text-blue-600"
+                        : "bg-orange-50 text-orange-600"
+                    )}
+                  >
+                    {booking.type}
+                  </span>
+                  <span className="rounded-full bg-gray-900 px-2.5 py-0.5 text-xs font-medium text-white">
+                    Turf {booking.turf ?? 1}
+                  </span>
+                </div>
               </div>
 
               {/* Slots */}

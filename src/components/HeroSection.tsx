@@ -12,7 +12,7 @@ export default function HeroSection() {
         animate={{ scale: 1 }}
         transition={{ duration: 1.8, ease: [0.22, 1, 0.36, 1] }}
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('/image/hero-3.jpeg')" }}
+        style={{ backgroundImage: "url('/image/img-2.jpg')" }}
       />
 
       {/* Black Overlay */}

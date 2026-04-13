@@ -8,16 +8,19 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   await connectDB();
   const date = request.nextUrl.searchParams.get("date");
+  const turfParam = request.nextUrl.searchParams.get("turf");
 
   if (!date) {
     return Response.json({ error: "Date is required" }, { status: 400 });
   }
 
-  const bookings = await Booking.find({ date });
+  const turf = turfParam === "2" ? 2 : 1;
+
+  const bookings = await Booking.find({ date, turf });
   const bookedSlots = new Set<number>();
   bookings.forEach((b) => b.slots.forEach((s: number) => bookedSlots.add(s)));
 
-  const unavailableEntries = await Unavailable.find({ date });
+  const unavailableEntries = await Unavailable.find({ date, turf });
   const unavailableSlots = new Set<number>();
   unavailableEntries.forEach((e) => e.slots.forEach((s: number) => unavailableSlots.add(s)));
 

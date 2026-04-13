@@ -21,9 +21,9 @@ export default function Home() {
       <Footer7
         logo={{
           url: "/",
-          src: "/image/hero-bg.jpg",
+          src: "/image/logo.png",
           alt: "Turf Cricket",
-          title: "Turf Cricket",
+          title: "Krishna Turf Twin",
         }}
         description="Premium cricket turf with online booking, floodlights, and top-notch facilities. Play your best game with us."
         sections={[

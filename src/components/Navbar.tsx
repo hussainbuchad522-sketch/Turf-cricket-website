@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { smoothScrollTo } from "@/lib/smoothScroll";
@@ -24,9 +25,20 @@ export default function Navbar() {
   return (
     <>
       {/* Desktop Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 hidden md:flex items-center justify-between w-fit rounded-full  border-black/90 bg-black/40 backdrop-blur-md px-5 py-2 mx-auto mt-4 gap-14">
-        <Link href="/" className="text-xl font-bold text-white tracking-tight">
-          Turf<span className="text-green-400">Cricket</span>
+      <nav className="fixed top-0 left-0 right-0 z-50 hidden md:flex items-center justify-between w-fit rounded-full  border-black/90 bg-black/40 backdrop-blur-md px-5 py-2 mx-auto mt-4 gap-20">
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-lg font-bold text-white tracking-tight"
+        >
+          {/* <Image
+            src="/image/logo.png"
+            alt="Turf Cricket logo"
+            width={36}
+            height={36}
+            className="h-9 w-9 rounded-full object-cover"
+            priority
+          /> */}
+          Krishna Turf Twin
         </Link>
 
         <ul
@@ -52,7 +64,18 @@ export default function Navbar() {
 
       {/* Mobile Navbar */}
       <nav className="fixed top-0 bg-black/80 backdrop-blur-xl left-0 right-0 z-50 flex md:hidden items-center justify-between px-4 py-3">
-        <Link href="/" className="text-lg font-bold text-white tracking-tight">
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-lg font-bold text-white tracking-tight"
+        >
+          <Image
+            src="/image/logo.png"
+            alt="Turf Cricket logo"
+            width={32}
+            height={32}
+            className="h-8 w-8 rounded-full object-cover"
+            priority
+          />
           Turf<span className="text-green-400">Cricket</span>
         </Link>
 

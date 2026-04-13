@@ -13,10 +13,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { timeSlots } from "@/lib/timeSlots";
+import { timeSlots, calcTotal } from "@/lib/timeSlots";
 
 export default function CreateBookingPage() {
   const [date, setDate] = useState<Date>(new Date());
+  const [turf, setTurf] = useState<1 | 2>(1);
   const [bookedSlots, setBookedSlots] = useState<number[]>([]);
   const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
   const [name, setName] = useState("");
@@ -28,12 +29,12 @@ export default function CreateBookingPage() {
 
   const fetchSlots = useCallback(async () => {
     setLoading(true);
-    const res = await fetch(`/api/slots?date=${dateStr}`);
+    const res = await fetch(`/api/slots?date=${dateStr}&turf=${turf}`);
     const data = await res.json();
     setBookedSlots(data.bookedSlots || []);
     setSelectedSlots([]);
     setLoading(false);
-  }, [dateStr]);
+  }, [dateStr, turf]);
 
   useEffect(() => {
     fetchSlots();
@@ -62,10 +63,7 @@ export default function CreateBookingPage() {
     });
   };
 
-  const totalPrice = selectedSlots.reduce(
-    (sum, i) => sum + timeSlots[i].price,
-    0
-  );
+  const { subtotal, gst, total } = calcTotal(selectedSlots);
 
   const handleSubmit = async () => {
     if (!name || phone.length !== 10 || selectedSlots.length === 0) return;
@@ -78,6 +76,7 @@ export default function CreateBookingPage() {
         name,
         phone,
         date: dateStr,
+        turf,
         slots: selectedSlots,
         type: "offline",
       }),
@@ -106,8 +105,28 @@ export default function CreateBookingPage() {
         </div>
       )}
 
-      {/* Date + Form Row */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      {/* Turf + Date + Form Row */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="space-y-2">
+          <Label>Turf</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {[1, 2].map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTurf(t as 1 | 2)}
+                className={cn(
+                  "h-9 rounded-lg border text-sm font-medium transition-all",
+                  turf === t
+                    ? "border-black bg-black text-white"
+                    : "border-input hover:border-black/40"
+                )}
+              >
+                Turf {t}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="space-y-2">
           <Label>Date</Label>
           <Popover>
@@ -152,7 +171,7 @@ export default function CreateBookingPage() {
       {/* Slot Grid */}
       <div className="rounded-xl border bg-white p-5">
         <h2 className="mb-4 font-semibold">
-          Slots — {format(date, "dd MMM yyyy")}
+          Turf {turf} · {format(date, "dd MMM yyyy")}
         </h2>
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
@@ -199,9 +218,15 @@ export default function CreateBookingPage() {
       <div className="flex items-center justify-between rounded-xl border bg-white p-5">
         <div>
           <p className="text-sm text-muted-foreground">
-            {selectedSlots.length} slot{selectedSlots.length !== 1 ? "s" : ""} selected
+            Turf {turf} · {selectedSlots.length} slot
+            {selectedSlots.length !== 1 ? "s" : ""} selected
           </p>
-          <p className="text-2xl font-bold">₹{totalPrice}</p>
+          <p className="text-2xl font-bold">₹{total}</p>
+          {selectedSlots.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              ₹{subtotal} + ₹{gst} GST included
+            </p>
+          )}
         </div>
         <Button
           className="bg-black text-white hover:bg-black/90 px-8"
