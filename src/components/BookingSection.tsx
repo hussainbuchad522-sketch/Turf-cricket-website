@@ -28,10 +28,15 @@ export default function BookingSection() {
   const fetchSlotStatus = useCallback(async () => {
     if (!date) return;
     const dateStr = format(date, "yyyy-MM-dd");
-    const res = await fetch(`/api/slots?date=${dateStr}&turf=${turf}`);
-    const data = await res.json();
-    setBookedSlots(data.bookedSlots || []);
-    setUnavailableSlots(data.unavailableSlots || []);
+    try {
+      const res = await fetch(`/api/slots?date=${dateStr}&turf=${turf}`);
+      const data = await res.json();
+      setBookedSlots(data.bookedSlots || []);
+      setUnavailableSlots(data.unavailableSlots || []);
+    } catch {
+      setBookedSlots([]);
+      setUnavailableSlots([]);
+    }
     setSelectedSlots([]);
   }, [date, turf]);
 

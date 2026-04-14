@@ -33,7 +33,8 @@
       "Bash(npm install:*)",
       "Bash(npx shadcn@latest add sidebar --yes --overwrite)",
       "Bash(git add:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm list:*)"
     ]
   }
 }

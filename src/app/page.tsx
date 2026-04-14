@@ -22,7 +22,7 @@ export default function Home() {
           url: "/",
           src: "/image/logo.png",
           alt: "Turf Cricket",
-          title: "Krishna Turf Twin",
+          title: "Krishna Twin Turf",
         }}
         description="Premium cricket turf with online booking, floodlights, and top-notch facilities. Play your best game with us."
         sections={[
@@ -37,15 +37,11 @@ export default function Home() {
           },
           {
             title: "Support",
-            links: [
-              { name: "Privacy Policy", href: "#" },
-            ],
+            links: [{ name: "Privacy Policy", href: "#" }],
           },
         ]}
         copyright="© 2026 Turf Cricket. All rights reserved."
-        legalLinks={[
-          { name: "Privacy Policy", href: "#" },
-        ]}
+        legalLinks={[{ name: "Privacy Policy", href: "#" }]}
       />
     </main>
   );

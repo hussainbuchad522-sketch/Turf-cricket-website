@@ -19,6 +19,7 @@ export default function CreateBookingPage() {
   const [date, setDate] = useState<Date>(new Date());
   const [turf, setTurf] = useState<1 | 2>(1);
   const [bookedSlots, setBookedSlots] = useState<number[]>([]);
+  const [unavailableSlots, setUnavailableSlots] = useState<number[]>([]);
   const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -29,9 +30,15 @@ export default function CreateBookingPage() {
 
   const fetchSlots = useCallback(async () => {
     setLoading(true);
-    const res = await fetch(`/api/slots?date=${dateStr}&turf=${turf}`);
-    const data = await res.json();
-    setBookedSlots(data.bookedSlots || []);
+    try {
+      const res = await fetch(`/api/slots?date=${dateStr}&turf=${turf}`);
+      const data = await res.json();
+      setBookedSlots(data.bookedSlots || []);
+      setUnavailableSlots(data.unavailableSlots || []);
+    } catch {
+      setBookedSlots([]);
+      setUnavailableSlots([]);
+    }
     setSelectedSlots([]);
     setLoading(false);
   }, [dateStr, turf]);
@@ -41,7 +48,7 @@ export default function CreateBookingPage() {
   }, [fetchSlots]);
 
   const isSlotSelectable = (index: number) => {
-    if (bookedSlots.includes(index)) return false;
+    if (bookedSlots.includes(index) || unavailableSlots.includes(index)) return false;
     if (selectedSlots.length === 0) return true;
     if (selectedSlots.includes(index)) return true;
     const min = Math.min(...selectedSlots);
@@ -50,7 +57,7 @@ export default function CreateBookingPage() {
   };
 
   const toggleSlot = (index: number) => {
-    if (bookedSlots.includes(index)) return;
+    if (bookedSlots.includes(index) || unavailableSlots.includes(index)) return;
     setSelectedSlots((prev) => {
       if (prev.includes(index)) {
         const min = Math.min(...prev);
@@ -179,27 +186,30 @@ export default function CreateBookingPage() {
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {timeSlots.map((slot, index) => {
               const isBooked = bookedSlots.includes(index);
+              const isUnavailable = unavailableSlots.includes(index);
               const isSelected = selectedSlots.includes(index);
               const selectable = isSlotSelectable(index);
               return (
                 <button
                   key={index}
                   onClick={() => toggleSlot(index)}
-                  disabled={isBooked || (!selectable && !isSelected)}
+                  disabled={isBooked || isUnavailable || (!selectable && !isSelected)}
                   className={cn(
                     "rounded-lg border px-3 py-2.5 text-left text-sm transition-all",
                     isBooked
                       ? "border-green-500 bg-green-50 text-green-700 cursor-not-allowed"
-                      : isSelected
-                        ? "border-black bg-black text-white"
-                        : selectable
-                          ? "border-input hover:border-black/40"
-                          : "border-input opacity-40 cursor-not-allowed"
+                      : isUnavailable
+                        ? "border-red-300 bg-red-50 text-red-400 cursor-not-allowed"
+                        : isSelected
+                          ? "border-black bg-black text-white"
+                          : selectable
+                            ? "border-input hover:border-black/40"
+                            : "border-input opacity-40 cursor-not-allowed"
                   )}
                 >
                   <span className="block text-xs font-medium">{slot.time}</span>
                   <span className="text-xs opacity-70">
-                    {isBooked ? "Booked" : `₹${slot.price}`}
+                    {isBooked ? "Booked" : isUnavailable ? "Not Available" : `₹${slot.price}`}
                   </span>
                 </button>
               );
@@ -210,6 +220,7 @@ export default function CreateBookingPage() {
         <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border border-input" /> Available</span>
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-green-50 border border-green-500" /> Booked</span>
+          <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-red-50 border border-red-300" /> Not Available</span>
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-black" /> Selected</span>
         </div>
       </div>

@@ -41,7 +41,7 @@ export default function Navbar() {
           href="/"
           className={cn(
             "flex items-center gap-2 text-lg font-bold tracking-tight transition-colors duration-300",
-            scrolled ? "text-black" : "text-white"
+            scrolled ? "text-black" : "text-white",
           )}
         >
           <Image
@@ -51,8 +51,8 @@ export default function Navbar() {
             height={36}
             className="h-9 w-9 rounded-full object-cover"
             priority
-          /> 
-          Krishna Turf Twin
+          />
+          Krishna Twin Turf
         </Link>
 
         <ul
@@ -79,7 +79,7 @@ export default function Navbar() {
             "rounded-full px-6 py-2.5 text-sm font-semibold transition-all duration-300 hover:shadow-lg",
             scrolled
               ? "bg-black text-white hover:bg-black/90"
-              : "bg-white text-black hover:bg-white/90"
+              : "bg-white text-black hover:bg-white/90",
           )}
         >
           Book Now
@@ -92,7 +92,7 @@ export default function Navbar() {
           href="/"
           className={cn(
             "flex items-center gap-2 text-lg font-bold tracking-tight transition-colors duration-300",
-            scrolled ? "text-black" : "text-white"
+            scrolled ? "text-black" : "text-white",
           )}
         >
           <Image
@@ -112,7 +112,7 @@ export default function Navbar() {
             onClick={(e) => smoothScrollTo(e, "#booking")}
             className={cn(
               "rounded-full px-4 py-2 text-xs font-semibold transition-colors duration-300",
-              scrolled ? "bg-black text-white" : "bg-white text-black"
+              scrolled ? "bg-black text-white" : "bg-white text-black",
             )}
           >
             Book Now
@@ -197,7 +197,9 @@ function Tab({
         onClick={(e) => smoothScrollTo(e, href)}
         className={cn(
           "block px-3 py-2 text-sm font-medium transition-colors duration-300",
-          scrolled ? "text-black hover:text-white" : "text-white hover:text-black"
+          scrolled
+            ? "text-black hover:text-white"
+            : "text-white hover:text-black",
         )}
       >
         {children}
@@ -218,7 +220,7 @@ function Cursor({
       animate={position}
       className={cn(
         "absolute z-0 h-9 rounded-full transition-colors duration-300",
-        scrolled ? "bg-black" : "bg-white"
+        scrolled ? "bg-black" : "bg-white",
       )}
     />
   );
