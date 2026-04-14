@@ -204,7 +204,7 @@ export default function BookingSection() {
                         : "border-input hover:border-black/40"
                     )}
                   >
-                    Turf {t}
+                    Box {t}
                   </button>
                 ))}
               </div>
@@ -306,7 +306,7 @@ export default function BookingSection() {
             <div className="flex items-center justify-between rounded-lg border border-input p-4">
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Turf {turf} · {selectedSlots.length} slot
+                  Box {turf} · {selectedSlots.length} slot
                   {selectedSlots.length !== 1 ? "s" : ""}
                 </p>
                 {selectedSlots.length > 0 ? (

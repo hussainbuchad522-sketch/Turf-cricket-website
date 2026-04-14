@@ -33,16 +33,18 @@ export default function VideoSection() {
 
         <RevealOnScroll delay={0.15}>
           <div
-            className="group relative mx-auto max-w-5xl overflow-hidden rounded-2xl bg-black shadow-lg aspect-video cursor-pointer"
+            className="group relative mx-auto md:h-full max-w-7xl overflow-hidden rounded-2xl bg-black shadow-lg aspect-video cursor-pointer"
             onClick={togglePlay}
           >
             <video
               ref={videoRef}
               className="h-full w-full object-cover"
-              poster="/image/hero-bg.jpg"
+              poster="/image/img-1.jpg"
+              preload="metadata"
+              playsInline
               onEnded={() => setPlaying(false)}
             >
-              <source src="/video/turf.mp4" type="video/mp4" />
+              <source src="/video/video.mp4" type="video/mp4" />
               Your browser does not support the video tag.
             </video>
 

@@ -132,7 +132,7 @@ export default function AllBookingsPage() {
                     {booking.type}
                   </span>
                   <span className="rounded-full bg-gray-900 px-2.5 py-0.5 text-xs font-medium text-white">
-                    Turf {booking.turf ?? 1}
+                    Box {booking.turf ?? 1}
                   </span>
                 </div>
               </div>

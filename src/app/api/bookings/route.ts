@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
   const conflict = slots.find((s: number) => bookedSlots.has(s));
   if (conflict !== undefined) {
     return Response.json(
-      { error: `Slot "${timeSlots[conflict].time}" is already booked on Turf ${turfNum}` },
+      { error: `Slot "${timeSlots[conflict].time}" is already booked on Box ${turfNum}` },
       { status: 409 }
     );
   }

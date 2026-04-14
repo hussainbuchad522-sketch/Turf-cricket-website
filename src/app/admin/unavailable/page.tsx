@@ -121,7 +121,7 @@ export default function MarkUnavailablePage() {
                     : "border-input hover:border-black/40"
                 )}
               >
-                Turf {t}
+                Box {t}
               </button>
             ))}
           </div>
@@ -156,7 +156,7 @@ export default function MarkUnavailablePage() {
       {/* Slot Grid */}
       <div className="rounded-xl border bg-white p-5">
         <h2 className="mb-4 font-semibold">
-          Turf {turf} · Block slots — {format(date, "dd MMM yyyy")}
+          Box {turf} · Block slots — {format(date, "dd MMM yyyy")}
         </h2>
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
@@ -219,7 +219,7 @@ export default function MarkUnavailablePage() {
       {entries.length > 0 && (
         <div className="rounded-xl border bg-white p-5 space-y-4">
           <h2 className="font-semibold">
-            Blocked Slots — Turf {turf} · {format(date, "dd MMM yyyy")}
+            Blocked Slots — Box {turf} · {format(date, "dd MMM yyyy")}
           </h2>
           <div className="space-y-3">
             {entries.map((entry) => (

@@ -122,7 +122,7 @@ export default function CreateBookingPage() {
                     : "border-input hover:border-black/40"
                 )}
               >
-                Turf {t}
+                Box {t}
               </button>
             ))}
           </div>
@@ -171,7 +171,7 @@ export default function CreateBookingPage() {
       {/* Slot Grid */}
       <div className="rounded-xl border bg-white p-5">
         <h2 className="mb-4 font-semibold">
-          Turf {turf} · {format(date, "dd MMM yyyy")}
+          Box {turf} · {format(date, "dd MMM yyyy")}
         </h2>
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
@@ -218,7 +218,7 @@ export default function CreateBookingPage() {
       <div className="flex items-center justify-between rounded-xl border bg-white p-5">
         <div>
           <p className="text-sm text-muted-foreground">
-            Turf {turf} · {selectedSlots.length} slot
+            Box {turf} · {selectedSlots.length} slot
             {selectedSlots.length !== 1 ? "s" : ""} selected
           </p>
           <p className="text-2xl font-bold">₹{total}</p>

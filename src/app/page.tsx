@@ -6,7 +6,6 @@ import VideoSection from "@/components/VideoSection";
 import Gallery from "@/components/Gallery";
 import BookingSection from "@/components/BookingSection";
 import { Footer7 } from "@/components/footer-7";
-import { FaInstagram, FaFacebook, FaTwitter } from "react-icons/fa";
 
 export default function Home() {
   return (
@@ -41,23 +40,6 @@ export default function Home() {
             links: [
               { name: "Privacy Policy", href: "#" },
             ],
-          },
-        ]}
-        socialLinks={[
-          {
-            icon: <FaInstagram className="size-5" />,
-            href: "#",
-            label: "Instagram",
-          },
-          {
-            icon: <FaFacebook className="size-5" />,
-            href: "#",
-            label: "Facebook",
-          },
-          {
-            icon: <FaTwitter className="size-5" />,
-            href: "#",
-            label: "Twitter",
           },
         ]}
         copyright="© 2026 Turf Cricket. All rights reserved."

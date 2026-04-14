@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { FaFacebook, FaInstagram, FaLinkedin, FaTwitter } from "react-icons/fa";
 import { smoothScrollTo } from "@/lib/smoothScroll";
 
 interface Footer7Props {
@@ -16,11 +15,6 @@ interface Footer7Props {
     links: Array<{ name: string; href: string }>;
   }>;
   description?: string;
-  socialLinks?: Array<{
-    icon: React.ReactElement;
-    href: string;
-    label: string;
-  }>;
   copyright?: string;
   legalLinks?: Array<{
     name: string;
@@ -58,13 +52,6 @@ const defaultSections = [
   },
 ];
 
-const defaultSocialLinks = [
-  { icon: <FaInstagram className="size-5" />, href: "#", label: "Instagram" },
-  { icon: <FaFacebook className="size-5" />, href: "#", label: "Facebook" },
-  { icon: <FaTwitter className="size-5" />, href: "#", label: "Twitter" },
-  { icon: <FaLinkedin className="size-5" />, href: "#", label: "LinkedIn" },
-];
-
 const defaultLegalLinks = [
   { name: "Terms and Conditions", href: "#" },
   { name: "Privacy Policy", href: "#" },
@@ -79,7 +66,6 @@ export const Footer7 = ({
   },
   sections = defaultSections,
   description = "A collection of components for your startup business or side project.",
-  socialLinks = defaultSocialLinks,
   copyright = "© 2024 Shadcnblocks.com. All rights reserved.",
   legalLinks = defaultLegalLinks,
 }: Footer7Props) => {
@@ -101,15 +87,6 @@ export const Footer7 = ({
               <h2 className="text-xl font-semibold">{logo.title}</h2>
             </div>
             <p className="md:max-w-[40%] text-sm text-black">{description}</p>
-            <ul className="flex items-center space-x-6 text-muted-foreground">
-              {socialLinks.map((social, idx) => (
-                <li key={idx} className="font-medium hover:text-primary">
-                  <a href={social.href} aria-label={social.label}>
-                    {social.icon}
-                  </a>
-                </li>
-              ))}
-            </ul>
           </div>
           <div className="flex gap-10 sm:gap-16 lg:gap-20">
             {sections.map((section, sectionIdx) => (
