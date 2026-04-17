@@ -21,6 +21,12 @@ export async function connectDB() {
     mongoCache.promise = mongoose.connect(MONGODB_URI);
   }
 
-  mongoCache.conn = await mongoCache.promise;
-  return mongoCache.conn;
+  try {
+    mongoCache.conn = await mongoCache.promise;
+    return mongoCache.conn;
+  } catch (error) {
+    // Clear the failed promise so the next call retries instead of reusing a broken connection
+    mongoCache.promise = null;
+    throw error;
+  }
 }

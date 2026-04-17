@@ -8,6 +8,10 @@ export interface IBooking extends Document {
   slots: number[];
   totalPrice: number;
   type: "online" | "offline";
+  paymentId?: string;
+  orderId?: string;
+  isRecurring?: boolean;
+  recurringGroupId?: string;
   createdAt: Date;
 }
 
@@ -19,6 +23,10 @@ const BookingSchema = new Schema<IBooking>({
   slots: { type: [Number], required: true },
   totalPrice: { type: Number, required: true },
   type: { type: String, enum: ["online", "offline"], default: "offline" },
+  paymentId: { type: String },
+  orderId: { type: String },
+  isRecurring: { type: Boolean, default: false },
+  recurringGroupId: { type: String, index: true },
   createdAt: { type: Date, default: Date.now },
 });
 

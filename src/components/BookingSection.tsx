@@ -14,7 +14,52 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { timeSlots, calcTotal } from "@/lib/timeSlots";
+import { timeSlots, calcTotal, isSlotExpired } from "@/lib/timeSlots";
+
+type RazorpayOptions = {
+  key: string;
+  amount: number;
+  currency: string;
+  order_id: string;
+  name: string;
+  description: string;
+  image?: string;
+  prefill: { name: string; contact: string; email?: string; method?: string };
+  theme: { color: string };
+  method?: {
+    upi?: boolean;
+    card?: boolean;
+    netbanking?: boolean;
+    wallet?: boolean;
+    emi?: boolean;
+    paylater?: boolean;
+  };
+  config?: {
+    display: {
+      blocks: Record<
+        string,
+        {
+          name: string;
+          instruments: { method: string; flows?: string[] }[];
+        }
+      >;
+      sequence: string[];
+      preferences: { show_default_blocks: boolean };
+    };
+  };
+  handler: (response: {
+    razorpay_payment_id: string;
+    razorpay_order_id: string;
+    razorpay_signature: string;
+  }) => void;
+  modal: { ondismiss: () => void };
+};
+
+declare global {
+  interface Window {
+    Razorpay: new (options: RazorpayOptions) => { open: () => void };
+  }
+}
 
 export default function BookingSection() {
   const [date, setDate] = useState<Date>();
@@ -22,8 +67,15 @@ export default function BookingSection() {
   const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
   const [bookedSlots, setBookedSlots] = useState<number[]>([]);
   const [unavailableSlots, setUnavailableSlots] = useState<number[]>([]);
+  const [lockedSlots, setLockedSlots] = useState<number[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
   const fetchSlotStatus = useCallback(async () => {
     if (!date) return;
@@ -33,10 +85,16 @@ export default function BookingSection() {
       const data = await res.json();
       setBookedSlots(data.bookedSlots || []);
       setUnavailableSlots(data.unavailableSlots || []);
+      setLockedSlots(data.lockedSlots || []);
     } catch {
       setBookedSlots([]);
       setUnavailableSlots([]);
+      setLockedSlots([]);
     }
+  }, [date, turf]);
+
+  // Clear selection only when user changes date or turf
+  useEffect(() => {
     setSelectedSlots([]);
   }, [date, turf]);
 
@@ -44,8 +102,21 @@ export default function BookingSection() {
     fetchSlotStatus();
   }, [fetchSlotStatus]);
 
+  // Poll every 30s so locked slots update live as other users finish/abandon payment
+  useEffect(() => {
+    if (!date) return;
+    const interval = setInterval(fetchSlotStatus, 30_000);
+    return () => clearInterval(interval);
+  }, [date, fetchSlotStatus]);
+
   const isSlotSelectable = (index: number) => {
-    if (bookedSlots.includes(index) || unavailableSlots.includes(index)) return false;
+    if (
+      bookedSlots.includes(index) ||
+      unavailableSlots.includes(index) ||
+      lockedSlots.includes(index)
+    )
+      return false;
+    if (date && isSlotExpired(index, date)) return false;
     if (selectedSlots.length === 0) return true;
     if (selectedSlots.includes(index)) return true;
     const min = Math.min(...selectedSlots);
@@ -54,7 +125,13 @@ export default function BookingSection() {
   };
 
   const toggleSlot = (index: number) => {
-    if (bookedSlots.includes(index) || unavailableSlots.includes(index)) return;
+    if (
+      bookedSlots.includes(index) ||
+      unavailableSlots.includes(index) ||
+      lockedSlots.includes(index)
+    )
+      return;
+    if (date && isSlotExpired(index, date)) return;
     setSelectedSlots((prev) => {
       if (prev.includes(index)) {
         const min = Math.min(...prev);
@@ -70,15 +147,23 @@ export default function BookingSection() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const { subtotal, gst, total } = calcTotal(selectedSlots);
+  const { subtotal, discount, gst, total } = calcTotal(selectedSlots);
 
   const handleBooking = async () => {
-    if (!name || phone.length !== 10 || !date || selectedSlots.length === 0) return;
+    if (!name || phone.length !== 10 || !date || selectedSlots.length === 0)
+      return;
+    if (typeof window === "undefined" || !window.Razorpay) {
+      alert("Payment system is still loading. Please try again in a moment.");
+      return;
+    }
+
     setSubmitting(true);
     setSuccess(false);
 
     const dateStr = format(date, "yyyy-MM-dd");
-    const res = await fetch("/api/bookings", {
+
+    // 1. Create Razorpay order on server (this also locks the slots)
+    const orderRes = await fetch("/api/razorpay/order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -87,23 +172,79 @@ export default function BookingSection() {
         date: dateStr,
         turf,
         slots: selectedSlots,
-        type: "online",
       }),
     });
 
-    setSubmitting(false);
-
-    if (res.ok) {
-      setName("");
-      setPhone("");
-      setSelectedSlots([]);
-      setSuccess(true);
+    if (!orderRes.ok) {
+      setSubmitting(false);
+      const data = await orderRes.json().catch(() => ({}));
+      alert(data.error || "Could not start payment. Please try again.");
       fetchSlotStatus();
-      setTimeout(() => setSuccess(false), 5000);
-    } else {
-      const data = await res.json();
-      alert(data.error || "Booking failed. Please try again.");
+      return;
     }
+
+    const { orderId, amount, currency, keyId } = await orderRes.json();
+
+    // 2. Open Razorpay checkout — UPI only
+    const rzp = new window.Razorpay({
+      key: keyId,
+      amount,
+      currency,
+      order_id: orderId,
+      name: "Krishna Twin Turf",
+      description: `Box ${turf} · ${selectedSlots.length} slot${selectedSlots.length !== 1 ? "s" : ""}`,
+      image: "/image/logo.png",
+      // Pre-select UPI. email is required for `method` prefill to work.
+      prefill: {
+        name,
+        contact: phone,
+        email: "customer@krishnatwinturf.com",
+        method: "upi",
+      },
+      theme: { color: "#000000" },
+      method: {
+        upi: true,
+        card: false,
+        netbanking: false,
+        wallet: false,
+        emi: false,
+        paylater: false,
+      },
+      handler: async (response) => {
+        // 3. Verify payment on server; booking is created if signature is valid
+        const verifyRes = await fetch("/api/razorpay/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(response),
+        });
+
+        setSubmitting(false);
+
+        if (verifyRes.ok) {
+          setName("");
+          setPhone("");
+          setSelectedSlots([]);
+          setSuccess(true);
+          fetchSlotStatus();
+          setTimeout(() => setSuccess(false), 7000);
+        } else {
+          const data = await verifyRes.json().catch(() => ({}));
+          alert(
+            data.error ||
+              "Payment verification failed. Please contact support.",
+          );
+          fetchSlotStatus();
+        }
+      },
+      modal: {
+        ondismiss: () => {
+          setSubmitting(false);
+          fetchSlotStatus();
+        },
+      },
+    });
+
+    rzp.open();
   };
 
   return (
@@ -111,54 +252,16 @@ export default function BookingSection() {
       <div className="mx-auto max-w-7xl px-5">
         <RevealOnScroll>
           <div className="mx-auto max-w-xl space-y-3 text-center mb-8 md:mb-12 md:space-y-4">
-            <h2 className="text-3xl font-medium sm:text-4xl lg:text-5xl">Book Your Slot</h2>
+            <h2 className="text-3xl font-medium sm:text-4xl lg:text-5xl">
+              Book Your Slot
+            </h2>
             <p className="text-muted-foreground">
               Pick your date, choose a time slot, and you&apos;re all set.
             </p>
           </div>
         </RevealOnScroll>
 
-        <div className="grid gap-8 md:grid-cols-2 md:gap-16 items-start">
-          {/* Left - Google Map + Contacts */}
-          <div className="space-y-5">
-            <div className="overflow-hidden rounded-2xl h-[250px] w-full sm:h-[300px] md:h-[400px]">
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3691.5!2d70.0696!3d22.4707!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39571500124d3cad%3A0xba6177ac8055e10b!2sKrishna%20Twin%20Turf!5e0!3m2!1sen!2sin!4v1"
-                className="h-full w-full border-0"
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
-            </div>
-
-            {/* Contact Numbers */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold">Contact Us</h3>
-              <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                {[
-                  { name: "Ram bhai", phone: "9408950000" },
-                  { name: "Balkrishna bhai", phone: "9974888178" },
-                  { name: "Yash bhai", phone: "9601107505" },
-                  { name: "Hussain bhai", phone: "9499723659" },
-                ].map((contact) => (
-                  <a
-                    key={contact.phone}
-                    href={`tel:${contact.phone}`}
-                    className="flex items-center gap-3 rounded-lg border border-input p-3 transition-colors hover:bg-muted"
-                  >
-                    <Phone className="size-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">{contact.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {contact.phone}
-                      </p>
-                    </div>
-                  </a>
-                ))}
-              </div>
-            </div>
-          </div>
-
+        <div className="grid gap-8 md:grid-cols-1 md:gap-16 items-start">
           {/* Right - Booking Form */}
           <div className="space-y-5">
             {/* Name & Phone */}
@@ -206,7 +309,7 @@ export default function BookingSection() {
                       "rounded-lg border px-4 py-2.5 text-sm font-medium transition-all",
                       turf === t
                         ? "border-black bg-black text-white"
-                        : "border-input hover:border-black/40"
+                        : "border-input hover:border-black/40",
                     )}
                   >
                     Box {t}
@@ -225,7 +328,7 @@ export default function BookingSection() {
                 <PopoverTrigger
                   className={cn(
                     "flex h-8 w-full items-center rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors",
-                    !date && "text-muted-foreground"
+                    !date && "text-muted-foreground",
                   )}
                 >
                   <CalendarIcon className="mr-2 size-4" />
@@ -253,39 +356,57 @@ export default function BookingSection() {
                 </span>
               </Label>
               {!date ? (
-                <p className="text-sm text-muted-foreground py-4">Please select a date first</p>
+                <p className="text-sm text-muted-foreground py-4">
+                  Please select a date first
+                </p>
               ) : (
-                <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 sm:max-h-76 md:grid-cols-3">
+                <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 sm:max-h-76 md:grid-cols-6">
                   {timeSlots.map((slot, index) => {
                     const selected = selectedSlots.includes(index);
                     const isBooked = bookedSlots.includes(index);
                     const isUnavailable = unavailableSlots.includes(index);
+                    const isLocked = lockedSlots.includes(index);
+                    const expired = isSlotExpired(index, date);
                     const selectable = isSlotSelectable(index);
                     return (
                       <button
                         key={index}
                         onClick={() => toggleSlot(index)}
-                        disabled={isBooked || isUnavailable || (!selectable && !selected)}
+                        disabled={
+                          isBooked ||
+                          isUnavailable ||
+                          isLocked ||
+                          expired ||
+                          (!selectable && !selected)
+                        }
                         className={cn(
                           "rounded-lg border px-3 py-2 text-left text-sm transition-all",
                           isBooked
                             ? "border-green-500 bg-green-50 text-green-700 cursor-not-allowed"
-                            : isUnavailable
-                              ? "border-red-300 bg-red-50 text-red-400 cursor-not-allowed"
-                              : selected
-                                ? "border-black bg-black text-white"
-                                : selectable
-                                  ? "border-input hover:border-black/40"
-                                  : "border-input opacity-40 cursor-not-allowed"
+                            : isLocked
+                              ? "border-blue-400 bg-blue-50 text-blue-600 cursor-not-allowed animate-pulse"
+                              : isUnavailable
+                                ? "border-red-300 bg-red-50 text-red-400 cursor-not-allowed"
+                                : expired
+                                  ? "border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed"
+                                  : selected
+                                    ? "border-black bg-black text-white"
+                                    : selectable
+                                      ? "border-input hover:border-black/40"
+                                      : "border-input opacity-40 cursor-not-allowed",
                         )}
                       >
                         <span className="block font-medium">{slot.time}</span>
                         <span className="text-xs opacity-70">
                           {isBooked
                             ? "Booked"
-                            : isUnavailable
-                              ? "Not Available"
-                              : `₹${slot.price} · ${slot.light ? "With Light" : "Without Light"}`}
+                            : isLocked
+                              ? "Being Booked..."
+                              : isUnavailable
+                                ? "Not Available"
+                                : expired
+                                  ? "Expired"
+                                  : `₹${slot.price} · ${slot.light ? "With Light" : "Without Light"}`}
                         </span>
                       </button>
                     );
@@ -293,10 +414,29 @@ export default function BookingSection() {
                 </div>
               )}
               <div className="flex flex-wrap gap-4 mt-2 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border border-input" /> Available</span>
-                <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-green-50 border border-green-500" /> Booked</span>
-                <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-red-50 border border-red-300" /> Not Available</span>
-                <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-black" /> Selected</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-3 rounded-sm border border-input" />{" "}
+                  Available
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-3 rounded-sm bg-green-50 border border-green-500" />{" "}
+                  Booked
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-3 rounded-sm bg-blue-50 border border-blue-400" />{" "}
+                  Being Booked
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-3 rounded-sm bg-red-50 border border-red-300" />{" "}
+                  Not Available
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-3 rounded-sm bg-gray-100 border border-gray-300" />{" "}
+                  Expired
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-3 rounded-sm bg-black" /> Selected
+                </span>
               </div>
             </div>
 
@@ -316,7 +456,19 @@ export default function BookingSection() {
                 </p>
                 {selectedSlots.length > 0 ? (
                   <>
-                    <p className="text-2xl font-semibold">₹{total}</p>
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-2xl font-semibold">₹{total}</p>
+                      {discount > 0 && (
+                        <p className="text-sm text-muted-foreground line-through">
+                          ₹{subtotal + discount + gst}
+                        </p>
+                      )}
+                    </div>
+                    {discount > 0 && (
+                      <p className="text-xs text-green-600 font-medium">
+                        You save ₹{discount} with multi-slot discount
+                      </p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       ₹{subtotal} + ₹{gst} GST included
                     </p>
@@ -338,6 +490,45 @@ export default function BookingSection() {
               >
                 {submitting ? "Booking..." : "Book Now"}
               </Button>
+            </div>
+          </div>
+          {/* Left - Google Map + Contacts */}
+          <div className="space-y-5">
+            <div className="overflow-hidden rounded-2xl h-[250px] w-full sm:h-[300px] md:h-[400px]">
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3691.5!2d70.0696!3d22.4707!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39571500124d3cad%3A0xba6177ac8055e10b!2sKrishna%20Twin%20Turf!5e0!3m2!1sen!2sin!4v1"
+                className="h-full w-full border-0"
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
+
+            {/* Contact Numbers */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold">Contact Us</h3>
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                {[
+                  { name: "Ram bhai", phone: "9408950000" },
+                  { name: "Balkrishna bhai", phone: "9974888178" },
+                  { name: "Yash bhai", phone: "9601107505" },
+                  { name: "Hussain bhai", phone: "9499723659" },
+                ].map((contact) => (
+                  <a
+                    key={contact.phone}
+                    href={`tel:${contact.phone}`}
+                    className="flex items-center gap-3 rounded-lg border border-input p-3 transition-colors hover:bg-muted"
+                  >
+                    <Phone className="size-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">{contact.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {contact.phone}
+                      </p>
+                    </div>
+                  </a>
+                ))}
+              </div>
             </div>
           </div>
         </div>

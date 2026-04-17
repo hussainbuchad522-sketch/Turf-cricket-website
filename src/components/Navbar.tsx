@@ -103,7 +103,7 @@ export default function Navbar() {
             className="h-8 w-8 rounded-full object-cover"
             priority
           />
-          Krishna Turf Twin
+          Krishna Twin Turf
         </Link>
 
         <div className="flex items-center gap-3">

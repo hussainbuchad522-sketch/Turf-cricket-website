@@ -12,6 +12,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { timeSlots } from "@/lib/timeSlots";
 
@@ -34,23 +44,29 @@ export default function MarkUnavailablePage() {
   const [reason, setReason] = useState("Maintenance");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<UnavailableEntry | null>(null);
 
   const dateStr = format(date, "yyyy-MM-dd");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    try {
+      const [slotsRes, unavailRes] = await Promise.all([
+        fetch(`/api/slots?date=${dateStr}&turf=${turf}`),
+        fetch(`/api/unavailable?date=${dateStr}&turf=${turf}`),
+      ]);
 
-    const [slotsRes, unavailRes] = await Promise.all([
-      fetch(`/api/slots?date=${dateStr}&turf=${turf}`),
-      fetch(`/api/unavailable?date=${dateStr}&turf=${turf}`),
-    ]);
+      const slotsData = await slotsRes.json();
+      const unavailData = await unavailRes.json();
 
-    const slotsData = await slotsRes.json();
-    const unavailData = await unavailRes.json();
-
-    setBookedSlots(slotsData.bookedSlots || []);
-    setUnavailableSlots(slotsData.unavailableSlots || []);
-    setEntries(unavailData.entries || []);
+      setBookedSlots(slotsData.bookedSlots || []);
+      setUnavailableSlots(slotsData.unavailableSlots || []);
+      setEntries(unavailData.entries || []);
+    } catch {
+      setBookedSlots([]);
+      setUnavailableSlots([]);
+      setEntries([]);
+    }
     setSelectedSlots([]);
     setLoading(false);
   }, [dateStr, turf]);
@@ -85,8 +101,10 @@ export default function MarkUnavailablePage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Remove this unavailable block?")) return;
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget._id;
+    setDeleteTarget(null);
     const res = await fetch(`/api/unavailable/${id}`, { method: "DELETE" });
     if (res.ok) fetchData();
   };
@@ -234,7 +252,7 @@ export default function MarkUnavailablePage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => handleDelete(entry._id)}
+                  onClick={() => setDeleteTarget(entry)}
                   className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-100"
                 >
                   <Trash2 className="size-4" />
@@ -244,6 +262,26 @@ export default function MarkUnavailablePage() {
           </div>
         </div>
       )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove unavailable block?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will unblock{" "}
+              {deleteTarget && deleteTarget.slots.length} slot
+              {deleteTarget && deleteTarget.slots.length !== 1 ? "s" : ""} on{" "}
+              {deleteTarget && format(new Date(deleteTarget.date), "dd MMM yyyy")} · Box {deleteTarget?.turf}. They&apos;ll become bookable again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep blocked</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 text-white hover:bg-red-700">
+              Yes, remove block
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

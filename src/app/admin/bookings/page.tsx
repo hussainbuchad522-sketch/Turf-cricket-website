@@ -10,6 +10,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { timeSlots } from "@/lib/timeSlots";
 
@@ -22,6 +32,7 @@ interface Booking {
   slots: number[];
   totalPrice: number;
   type: "online" | "offline";
+  isRecurring?: boolean;
   createdAt: string;
 }
 
@@ -29,14 +40,19 @@ export default function AllBookingsPage() {
   const [date, setDate] = useState<Date>(new Date());
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Booking | null>(null);
 
   const dateStr = format(date, "yyyy-MM-dd");
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
-    const res = await fetch(`/api/bookings?date=${dateStr}`);
-    const data = await res.json();
-    setBookings(data.bookings || []);
+    try {
+      const res = await fetch(`/api/bookings?date=${dateStr}`);
+      const data = await res.json();
+      setBookings(data.bookings || []);
+    } catch {
+      setBookings([]);
+    }
     setLoading(false);
   }, [dateStr]);
 
@@ -44,8 +60,10 @@ export default function AllBookingsPage() {
     fetchBookings();
   }, [fetchBookings]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Cancel this booking?")) return;
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget._id;
+    setDeleteTarget(null);
     const res = await fetch(`/api/bookings/${id}`, { method: "DELETE" });
     if (res.ok) fetchBookings();
   };
@@ -121,6 +139,11 @@ export default function AllBookingsPage() {
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-1">
+                  {booking.isRecurring && (
+                    <span className="rounded-full bg-purple-50 px-2.5 py-0.5 text-xs font-medium text-purple-600">
+                      Recurring
+                    </span>
+                  )}
                   <span
                     className={cn(
                       "rounded-full px-2.5 py-0.5 text-xs font-medium",
@@ -145,18 +168,25 @@ export default function AllBookingsPage() {
                     className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-1.5 text-sm"
                   >
                     <span>{timeSlots[s].time}</span>
-                    <span className="text-xs text-muted-foreground">
-                      ₹{timeSlots[s].price}
-                    </span>
+                    {!booking.isRecurring && (
+                      <span className="text-xs text-muted-foreground">
+                        ₹{timeSlots[s].price}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
 
               {/* Footer */}
               <div className="flex items-center justify-between border-t pt-3">
-                <p className="text-lg font-bold">₹{booking.totalPrice}</p>
+                <div>
+                  <p className="text-lg font-bold">₹{booking.totalPrice}</p>
+                  {booking.isRecurring && (
+                    <p className="text-xs text-purple-600">Flat recurring rate</p>
+                  )}
+                </div>
                 <button
-                  onClick={() => handleDelete(booking._id)}
+                  onClick={() => setDeleteTarget(booking)}
                   className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs text-red-500 transition-colors hover:bg-red-50"
                 >
                   <Trash2 className="size-3.5" />
@@ -167,6 +197,24 @@ export default function AllBookingsPage() {
           ))}
         </div>
       )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this booking?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently cancel {deleteTarget?.name}&apos;s booking on{" "}
+              {deleteTarget && format(new Date(deleteTarget.date), "dd MMM yyyy")} · Box {deleteTarget?.turf}. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep booking</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 text-white hover:bg-red-700">
+              Yes, cancel booking
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

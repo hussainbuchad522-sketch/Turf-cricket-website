@@ -3,7 +3,16 @@
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { CalendarPlus, List, Ban, Lock } from "lucide-react";
+import Image from "next/image";
+import {
+  CalendarPlus,
+  List,
+  Ban,
+  Lock,
+  Repeat,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,6 +32,7 @@ import {
 const navItems = [
   { title: "Create Booking", href: "/admin", icon: CalendarPlus },
   { title: "All Bookings", href: "/admin/bookings", icon: List },
+  // { title: "Recurring Bookings", href: "/admin/recurring", icon: Repeat },
   { title: "Mark Unavailable", href: "/admin/unavailable", icon: Ban },
 ];
 
@@ -35,6 +45,7 @@ export default function AdminLayout({
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
@@ -76,16 +87,28 @@ export default function AdminLayout({
           </div>
 
           <div className="space-y-4">
-            <Input
-              type="password"
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-            />
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-black transition-colors"
+              >
+                {showPassword ? (
+                  <EyeOff className="size-4" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
+              </button>
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
             <Button
               className="w-full bg-black text-white hover:bg-black/90"
               onClick={handleLogin}
@@ -104,9 +127,23 @@ export default function AdminLayout({
       <SidebarProvider>
         <Sidebar>
           <SidebarHeader className="p-4">
-            <Link href="/admin" className="text-lg font-bold tracking-tight">
-              Krishna<span className="text-green-600">Turf</span>
-              <span className="ml-2 text-xs font-normal text-muted-foreground">Admin</span>
+            <Link
+              href="/admin"
+              className="flex items-center gap-2 text-base font-bold tracking-tight"
+            >
+              <Image
+                src="/image/logo.png"
+                alt="Krishna Twin Turf"
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+              <div>
+                Krishna <span className="text-blue-600">Twin Turf</span>
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  Admin
+                </span>
+              </div>
             </Link>
           </SidebarHeader>
           <SidebarContent>

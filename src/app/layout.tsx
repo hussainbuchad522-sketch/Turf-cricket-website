@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import LenisProvider from "@/components/LenisProvider";
@@ -140,6 +141,10 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen font-sans">
         <LenisProvider>{children}</LenisProvider>
+        <Script
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );
