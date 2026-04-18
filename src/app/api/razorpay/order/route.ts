@@ -44,12 +44,9 @@ export async function POST(request: NextRequest) {
 
     const { total: totalPrice } = calcTotal(slots);
 
-    // TODO: Remove test override before going live
-    const chargeAmount = 1; // ₹1 for testing — change back to totalPrice for production
-
     // Create Razorpay order (amount in paise)
     const order = await razorpay.orders.create({
-      amount: chargeAmount * 100,
+      amount: totalPrice * 100,
       currency: "INR",
       receipt: `turf_${Date.now()}`,
       notes: { name, phone, date, turf: String(turfNum) },

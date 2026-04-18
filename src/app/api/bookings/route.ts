@@ -2,10 +2,13 @@ import { NextRequest } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Booking from "@/lib/models/Booking";
 import { timeSlots, calcTotal } from "@/lib/timeSlots";
+import { requireAdmin } from "@/lib/require-admin";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     await connectDB();
     const date = request.nextUrl.searchParams.get("date");
@@ -27,6 +30,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     await connectDB();
     const body = await request.json();

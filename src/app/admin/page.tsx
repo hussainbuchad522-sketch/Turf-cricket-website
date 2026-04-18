@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { timeSlots, calcTotal, isSlotExpired } from "@/lib/timeSlots";
+import { SpinnerOverlay } from "@/components/ui/spinner";
 
 export default function CreateBookingPage() {
   const [date, setDate] = useState<Date>(new Date());
@@ -37,6 +38,7 @@ export default function CreateBookingPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [now, setNow] = useState(new Date());
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -105,30 +107,35 @@ export default function CreateBookingPage() {
   const handleSubmit = async () => {
     if (!name || phone.length !== 10 || selectedSlots.length === 0) return;
     setSuccess(false);
+    setSubmitting(true);
 
-    const res = await fetch("/api/bookings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        phone,
-        date: dateStr,
-        turf,
-        slots: selectedSlots,
-        type: "offline",
-      }),
-    });
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          phone,
+          date: dateStr,
+          turf,
+          slots: selectedSlots,
+          type: "offline",
+        }),
+      });
 
-    if (res.ok) {
-      setName("");
-      setPhone("");
-      setSelectedSlots([]);
-      setSuccess(true);
-      fetchSlots();
-      setTimeout(() => setSuccess(false), 3000);
-    } else {
-      const data = await res.json().catch(() => ({}));
-      setErrorMsg(data.error || "Failed to add booking");
+      if (res.ok) {
+        setName("");
+        setPhone("");
+        setSelectedSlots([]);
+        setSuccess(true);
+        fetchSlots();
+        setTimeout(() => setSuccess(false), 3000);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setErrorMsg(data.error || "Failed to add booking");
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -211,7 +218,7 @@ export default function CreateBookingPage() {
           Box {turf} · {format(date, "dd MMM yyyy")}
         </h2>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <SpinnerOverlay label="Loading slots..." />
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {timeSlots.map((slot, index) => {
@@ -237,7 +244,7 @@ export default function CreateBookingPage() {
                 badgeText = "Booked";
                 slotClass = "border-green-500 bg-green-50 text-green-700 cursor-not-allowed";
               } else if (isLocked) {
-                badgeText = "Being Booked...";
+                badgeText = "Someone is booking...";
                 slotClass = "border-blue-400 bg-blue-50 text-blue-600 cursor-not-allowed animate-pulse";
               } else if (isUnavailable) {
                 badgeText = "Not Available";
@@ -280,7 +287,7 @@ export default function CreateBookingPage() {
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-green-50 border border-green-500" /> Booked (Admin)</span>
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-emerald-50 border border-emerald-500" /> Booked Online</span>
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-purple-50 border border-purple-400" /> Recurring</span>
-          <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-blue-50 border border-blue-400" /> Being Booked</span>
+          <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-blue-50 border border-blue-400" /> Someone is booking</span>
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-red-50 border border-red-300" /> Not Available</span>
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-gray-100 border border-gray-300" /> Expired</span>
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-black" /> Selected</span>
@@ -318,9 +325,16 @@ export default function CreateBookingPage() {
         <Button
           className="bg-black text-white hover:bg-black/90 px-8"
           onClick={handleSubmit}
-          disabled={!name || phone.length !== 10 || selectedSlots.length === 0}
+          disabled={submitting || !name || phone.length !== 10 || selectedSlots.length === 0}
         >
-          Add Booking
+          {submitting ? (
+            <span className="inline-flex items-center gap-2">
+              <Loader2 className="size-4 animate-spin" />
+              Adding...
+            </span>
+          ) : (
+            "Add Booking"
+          )}
         </Button>
       </div>
 

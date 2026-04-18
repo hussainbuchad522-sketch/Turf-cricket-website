@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Phone } from "lucide-react";
+import { CalendarIcon, Loader2, Phone } from "lucide-react";
 import RevealOnScroll from "@/components/RevealOnScroll";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { timeSlots, calcTotal, isSlotExpired } from "@/lib/timeSlots";
+import { SpinnerOverlay } from "@/components/ui/spinner";
 
 type RazorpayOptions = {
   key: string;
@@ -71,27 +72,34 @@ export default function BookingSection() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [now, setNow] = useState(new Date());
+  const [slotsLoading, setSlotsLoading] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(timer);
   }, []);
 
-  const fetchSlotStatus = useCallback(async () => {
-    if (!date) return;
-    const dateStr = format(date, "yyyy-MM-dd");
-    try {
-      const res = await fetch(`/api/slots?date=${dateStr}&turf=${turf}`);
-      const data = await res.json();
-      setBookedSlots(data.bookedSlots || []);
-      setUnavailableSlots(data.unavailableSlots || []);
-      setLockedSlots(data.lockedSlots || []);
-    } catch {
-      setBookedSlots([]);
-      setUnavailableSlots([]);
-      setLockedSlots([]);
-    }
-  }, [date, turf]);
+  const fetchSlotStatus = useCallback(
+    async (opts: { showLoader?: boolean } = {}) => {
+      if (!date) return;
+      const dateStr = format(date, "yyyy-MM-dd");
+      if (opts.showLoader) setSlotsLoading(true);
+      try {
+        const res = await fetch(`/api/slots?date=${dateStr}&turf=${turf}`);
+        const data = await res.json();
+        setBookedSlots(data.bookedSlots || []);
+        setUnavailableSlots(data.unavailableSlots || []);
+        setLockedSlots(data.lockedSlots || []);
+      } catch {
+        setBookedSlots([]);
+        setUnavailableSlots([]);
+        setLockedSlots([]);
+      } finally {
+        if (opts.showLoader) setSlotsLoading(false);
+      }
+    },
+    [date, turf],
+  );
 
   // Clear selection only when user changes date or turf
   useEffect(() => {
@@ -99,13 +107,13 @@ export default function BookingSection() {
   }, [date, turf]);
 
   useEffect(() => {
-    fetchSlotStatus();
+    fetchSlotStatus({ showLoader: true });
   }, [fetchSlotStatus]);
 
   // Poll every 30s so locked slots update live as other users finish/abandon payment
   useEffect(() => {
     if (!date) return;
-    const interval = setInterval(fetchSlotStatus, 30_000);
+    const interval = setInterval(() => fetchSlotStatus(), 30_000);
     return () => clearInterval(interval);
   }, [date, fetchSlotStatus]);
 
@@ -162,28 +170,38 @@ export default function BookingSection() {
 
     const dateStr = format(date, "yyyy-MM-dd");
 
-    // 1. Create Razorpay order on server (this also locks the slots)
-    const orderRes = await fetch("/api/razorpay/order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        phone,
-        date: dateStr,
-        turf,
-        slots: selectedSlots,
-      }),
-    });
+    let orderId: string;
+    let amount: number;
+    let currency: string;
+    let keyId: string;
+    try {
+      const orderRes = await fetch("/api/razorpay/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          phone,
+          date: dateStr,
+          turf,
+          slots: selectedSlots,
+        }),
+      });
 
-    if (!orderRes.ok) {
+      if (!orderRes.ok) {
+        const data = await orderRes.json().catch(() => ({}));
+        alert(data.error || "Could not start payment. Please try again.");
+        setSubmitting(false);
+        fetchSlotStatus();
+        return;
+      }
+
+      ({ orderId, amount, currency, keyId } = await orderRes.json());
+    } catch (err) {
+      console.error("Order request failed:", err);
+      alert("Network error. Please check your connection and try again.");
       setSubmitting(false);
-      const data = await orderRes.json().catch(() => ({}));
-      alert(data.error || "Could not start payment. Please try again.");
-      fetchSlotStatus();
       return;
     }
-
-    const { orderId, amount, currency, keyId } = await orderRes.json();
 
     // 2. Open Razorpay checkout — UPI only
     const rzp = new window.Razorpay({
@@ -211,35 +229,47 @@ export default function BookingSection() {
         paylater: false,
       },
       handler: async (response) => {
-        // 3. Verify payment on server; booking is created if signature is valid
-        const verifyRes = await fetch("/api/razorpay/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(response),
-        });
+        try {
+          const verifyRes = await fetch("/api/razorpay/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(response),
+          });
 
-        setSubmitting(false);
-
-        if (verifyRes.ok) {
-          setName("");
-          setPhone("");
-          setSelectedSlots([]);
-          setSuccess(true);
-          fetchSlotStatus();
-          setTimeout(() => setSuccess(false), 7000);
-        } else {
-          const data = await verifyRes.json().catch(() => ({}));
+          if (verifyRes.ok) {
+            setName("");
+            setPhone("");
+            setSelectedSlots([]);
+            setSuccess(true);
+            fetchSlotStatus();
+            setTimeout(() => setSuccess(false), 7000);
+          } else {
+            const data = await verifyRes.json().catch(() => ({}));
+            alert(
+              data.error ||
+                "Payment verification failed. Please contact support.",
+            );
+            fetchSlotStatus();
+          }
+        } catch (err) {
+          console.error("Verify request failed:", err);
           alert(
-            data.error ||
-              "Payment verification failed. Please contact support.",
+            "Payment went through but we couldn't confirm it. Please contact support with your payment ID.",
           );
           fetchSlotStatus();
+        } finally {
+          setSubmitting(false);
         }
       },
       modal: {
         ondismiss: () => {
           setSubmitting(false);
-          fetchSlotStatus();
+          // Release the lock so slots free up immediately instead of waiting 3 min
+          fetch("/api/razorpay/cancel", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId }),
+          }).finally(() => fetchSlotStatus());
         },
       },
     });
@@ -359,6 +389,8 @@ export default function BookingSection() {
                 <p className="text-sm text-muted-foreground py-4">
                   Please select a date first
                 </p>
+              ) : slotsLoading ? (
+                <SpinnerOverlay label="Loading time slots..." />
               ) : (
                 <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 sm:max-h-76 md:grid-cols-6">
                   {timeSlots.map((slot, index) => {
@@ -401,7 +433,7 @@ export default function BookingSection() {
                           {isBooked
                             ? "Booked"
                             : isLocked
-                              ? "Being Booked..."
+                              ? "Someone is booking..."
                               : isUnavailable
                                 ? "Not Available"
                                 : expired
@@ -424,7 +456,7 @@ export default function BookingSection() {
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="size-3 rounded-sm bg-blue-50 border border-blue-400" />{" "}
-                  Being Booked
+                  Someone is booking
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="size-3 rounded-sm bg-red-50 border border-red-300" />{" "}
@@ -488,7 +520,14 @@ export default function BookingSection() {
                 }
                 onClick={handleBooking}
               >
-                {submitting ? "Booking..." : "Book Now"}
+                {submitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="size-4 animate-spin" />
+                    Booking...
+                  </span>
+                ) : (
+                  "Book Now"
+                )}
               </Button>
             </div>
           </div>

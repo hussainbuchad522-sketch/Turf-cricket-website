@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { timeSlots } from "@/lib/timeSlots";
+import { SpinnerOverlay } from "@/components/ui/spinner";
 
 interface Booking {
   _id: string;
@@ -41,6 +42,7 @@ export default function AllBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Booking | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const dateStr = format(date, "yyyy-MM-dd");
 
@@ -64,8 +66,18 @@ export default function AllBookingsPage() {
     if (!deleteTarget) return;
     const id = deleteTarget._id;
     setDeleteTarget(null);
-    const res = await fetch(`/api/bookings/${id}`, { method: "DELETE" });
-    if (res.ok) fetchBookings();
+    try {
+      const res = await fetch(`/api/bookings/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        fetchBookings();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setErrorMsg(data.error || "Failed to cancel booking. Please try again.");
+      }
+    } catch (err) {
+      console.error("Delete booking failed:", err);
+      setErrorMsg("Network error. Please check your connection and try again.");
+    }
   };
 
   const totalRevenue = bookings.reduce((sum, b) => sum + b.totalPrice, 0);
@@ -112,7 +124,9 @@ export default function AllBookingsPage() {
 
       {/* Bookings Cards */}
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading...</p>
+        <div className="rounded-xl border bg-white">
+          <SpinnerOverlay label="Loading bookings..." />
+        </div>
       ) : bookings.length === 0 ? (
         <div className="rounded-xl border bg-white p-10 text-center">
           <p className="text-muted-foreground">No bookings for {format(date, "dd MMM yyyy")}</p>
@@ -212,6 +226,18 @@ export default function AllBookingsPage() {
             <AlertDialogAction onClick={confirmDelete} className="bg-red-600 text-white hover:bg-red-700">
               Yes, cancel booking
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!errorMsg} onOpenChange={(o) => !o && setErrorMsg(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Could not cancel booking</AlertDialogTitle>
+            <AlertDialogDescription>{errorMsg}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setErrorMsg(null)}>OK</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

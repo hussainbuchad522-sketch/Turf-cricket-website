@@ -7,6 +7,15 @@ import { RAZORPAY_KEY_SECRET } from "@/lib/razorpay";
 
 export const dynamic = "force-dynamic";
 
+async function releaseLock(orderId: string | undefined) {
+  if (!orderId) return;
+  try {
+    await SlotLock.deleteOne({ orderId });
+  } catch (err) {
+    console.error("Failed to release SlotLock:", err);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
@@ -18,29 +27,31 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      await releaseLock(razorpay_order_id);
       return Response.json({ error: "Missing payment details" }, { status: 400 });
     }
 
-    // Verify signature: HMAC_SHA256(order_id + "|" + payment_id, secret)
     const expectedSignature = crypto
       .createHmac("sha256", RAZORPAY_KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
     if (expectedSignature !== razorpay_signature) {
+      console.error(
+        `Invalid payment signature for order ${razorpay_order_id}, payment ${razorpay_payment_id}`,
+      );
+      await releaseLock(razorpay_order_id);
       return Response.json({ error: "Invalid payment signature" }, { status: 400 });
     }
 
-    // Look up the locked booking details
     const lock = await SlotLock.findOne({ orderId: razorpay_order_id });
     if (!lock) {
       return Response.json(
         { error: "Booking session expired. Please try again." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Create the booking
     const booking = await Booking.create({
       name: lock.name,
       phone: lock.phone,
@@ -53,7 +64,6 @@ export async function POST(request: NextRequest) {
       orderId: razorpay_order_id,
     });
 
-    // Release the lock
     await SlotLock.deleteOne({ orderId: razorpay_order_id });
 
     return Response.json({ success: true, booking });

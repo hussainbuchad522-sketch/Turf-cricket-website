@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Trash2, Ban } from "lucide-react";
+import { CalendarIcon, Loader2, Trash2, Ban } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { timeSlots } from "@/lib/timeSlots";
+import { SpinnerOverlay } from "@/components/ui/spinner";
 
 interface UnavailableEntry {
   _id: string;
@@ -43,8 +44,10 @@ export default function MarkUnavailablePage() {
   const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
   const [reason, setReason] = useState("Maintenance");
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<UnavailableEntry | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const dateStr = format(date, "yyyy-MM-dd");
 
@@ -85,19 +88,30 @@ export default function MarkUnavailablePage() {
   const handleSubmit = async () => {
     if (selectedSlots.length === 0) return;
     setSuccess(false);
+    setSubmitting(true);
 
-    const res = await fetch("/api/unavailable", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date: dateStr, turf, slots: selectedSlots, reason }),
-    });
+    try {
+      const res = await fetch("/api/unavailable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: dateStr, turf, slots: selectedSlots, reason }),
+      });
 
-    if (res.ok) {
-      setSelectedSlots([]);
-      setReason("Maintenance");
-      setSuccess(true);
-      fetchData();
-      setTimeout(() => setSuccess(false), 3000);
+      if (res.ok) {
+        setSelectedSlots([]);
+        setReason("Maintenance");
+        setSuccess(true);
+        fetchData();
+        setTimeout(() => setSuccess(false), 3000);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setErrorMsg(data.error || "Failed to mark slots unavailable. Please try again.");
+      }
+    } catch (err) {
+      console.error("Mark unavailable failed:", err);
+      setErrorMsg("Network error. Please check your connection and try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -105,8 +119,18 @@ export default function MarkUnavailablePage() {
     if (!deleteTarget) return;
     const id = deleteTarget._id;
     setDeleteTarget(null);
-    const res = await fetch(`/api/unavailable/${id}`, { method: "DELETE" });
-    if (res.ok) fetchData();
+    try {
+      const res = await fetch(`/api/unavailable/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        fetchData();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setErrorMsg(data.error || "Failed to remove block. Please try again.");
+      }
+    } catch (err) {
+      console.error("Delete unavailable failed:", err);
+      setErrorMsg("Network error. Please check your connection and try again.");
+    }
   };
 
   return (
@@ -177,7 +201,7 @@ export default function MarkUnavailablePage() {
           Box {turf} · Block slots — {format(date, "dd MMM yyyy")}
         </h2>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <SpinnerOverlay label="Loading slots..." />
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {timeSlots.map((slot, index) => {
@@ -226,10 +250,19 @@ export default function MarkUnavailablePage() {
         <Button
           className="bg-red-500 text-white hover:bg-red-600 px-8"
           onClick={handleSubmit}
-          disabled={selectedSlots.length === 0}
+          disabled={submitting || selectedSlots.length === 0}
         >
-          <Ban className="mr-2 size-4" />
-          Mark Unavailable
+          {submitting ? (
+            <span className="inline-flex items-center gap-2">
+              <Loader2 className="size-4 animate-spin" />
+              Blocking...
+            </span>
+          ) : (
+            <>
+              <Ban className="mr-2 size-4" />
+              Mark Unavailable
+            </>
+          )}
         </Button>
       </div>
 
@@ -279,6 +312,18 @@ export default function MarkUnavailablePage() {
             <AlertDialogAction onClick={confirmDelete} className="bg-red-600 text-white hover:bg-red-700">
               Yes, remove block
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!errorMsg} onOpenChange={(o) => !o && setErrorMsg(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Something went wrong</AlertDialogTitle>
+            <AlertDialogDescription>{errorMsg}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setErrorMsg(null)}>OK</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { connectDB } from "@/lib/mongodb";
 import Booking from "@/lib/models/Booking";
 import { timeSlots } from "@/lib/timeSlots";
+import { requireAdmin } from "@/lib/require-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,8 @@ function toISODate(d: Date): string {
 
 // GET: list active recurring groups (one row per group)
 export async function GET() {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     await connectDB();
 
@@ -55,6 +58,8 @@ export async function GET() {
 
 // POST: create recurring booking across a date range
 export async function POST(request: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     await connectDB();
     const body = await request.json();

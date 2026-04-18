@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Booking from "@/lib/models/Booking";
 import Unavailable from "@/lib/models/Unavailable";
+import { requireAdmin } from "@/lib/require-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,8 @@ function toISODate(d: Date): string {
 // GET /api/slots/range?start=YYYY-MM-DD&end=YYYY-MM-DD&turf=1
 // Returns, per slot index, the list of dates in that range where the slot is unavailable.
 export async function GET(request: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     await connectDB();
     const start = request.nextUrl.searchParams.get("start");

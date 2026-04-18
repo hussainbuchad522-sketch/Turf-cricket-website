@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Repeat, Trash2, Phone, User } from "lucide-react";
+import { CalendarIcon, Loader2, Repeat, Trash2, Phone, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { timeSlots } from "@/lib/timeSlots";
+import { SpinnerOverlay } from "@/components/ui/spinner";
 
 interface RecurringGroup {
   _id: string;
@@ -142,35 +143,40 @@ export default function RecurringBookingPage() {
     setConfirmCreateOpen(false);
     setSubmitting(true);
 
-    const res = await fetch("/api/recurring", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        phone,
-        turf,
-        slots: selectedSlots,
-        startDate: format(startDate, "yyyy-MM-dd"),
-        endDate: format(endDate!, "yyyy-MM-dd"),
-        pricePerDay,
-      }),
-    });
+    try {
+      const res = await fetch("/api/recurring", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          phone,
+          turf,
+          slots: selectedSlots,
+          startDate: format(startDate, "yyyy-MM-dd"),
+          endDate: format(endDate!, "yyyy-MM-dd"),
+          pricePerDay,
+        }),
+      });
 
-    setSubmitting(false);
+      const data = await res.json().catch(() => ({}));
 
-    const data = await res.json();
-
-    if (res.ok) {
-      setSuccess(`Created ${data.count} bookings for ${name}`);
-      setName("");
-      setPhone("");
-      setSelectedSlots([]);
-      setEndDate(undefined);
-      setPricePerDay(0);
-      fetchGroups();
-      setTimeout(() => setSuccess(""), 5000);
-    } else {
-      setError(data.error || "Failed to create recurring booking");
+      if (res.ok) {
+        setSuccess(`Created ${data.count} bookings for ${name}`);
+        setName("");
+        setPhone("");
+        setSelectedSlots([]);
+        setEndDate(undefined);
+        setPricePerDay(0);
+        fetchGroups();
+        setTimeout(() => setSuccess(""), 5000);
+      } else {
+        setError(data.error || "Failed to create recurring booking");
+      }
+    } catch (err) {
+      console.error("Recurring create failed:", err);
+      setError("Network error. Please check your connection and try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -318,7 +324,10 @@ export default function RecurringBookingPage() {
           <div className="flex items-center justify-between">
             <Label>Time Slots</Label>
             {checkingAvailability && (
-              <span className="text-xs text-muted-foreground">Checking availability...</span>
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Loader2 className="size-3.5 animate-spin" />
+                Checking availability...
+              </span>
             )}
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
@@ -387,7 +396,14 @@ export default function RecurringBookingPage() {
           onClick={handleSubmitClick}
           disabled={submitting}
         >
-          {submitting ? "Creating..." : "Create Recurring Booking"}
+          {submitting ? (
+            <span className="inline-flex items-center gap-2">
+              <Loader2 className="size-4 animate-spin" />
+              Creating...
+            </span>
+          ) : (
+            "Create Recurring Booking"
+          )}
         </Button>
       </div>
 
@@ -395,7 +411,9 @@ export default function RecurringBookingPage() {
       <div className="space-y-3">
         <h2 className="font-semibold">Active Recurring Bookings</h2>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <div className="rounded-xl border bg-white">
+            <SpinnerOverlay label="Loading recurring bookings..." />
+          </div>
         ) : groups.length === 0 ? (
           <div className="rounded-xl border bg-white p-10 text-center">
             <p className="text-muted-foreground">No recurring bookings yet</p>

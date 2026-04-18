@@ -1,5 +1,6 @@
 import { connectDB } from "@/lib/mongodb";
 import Unavailable from "@/lib/models/Unavailable";
+import { requireAdmin } from "@/lib/require-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -7,6 +8,8 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     await connectDB();
     const { id } = await params;
